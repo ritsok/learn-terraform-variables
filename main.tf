@@ -2,12 +2,13 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
+      version = "~> 4.10.0"
     }
   }
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  region  = "us-west-1"
 }
 
 data "aws_availability_zones" "available" {
@@ -16,7 +17,7 @@ data "aws_availability_zones" "available" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "2.64.0"
+  version = "3.14.0"
 
   cidr = "10.0.0.0/16"
 
@@ -35,7 +36,7 @@ module "vpc" {
 
 module "app_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "3.17.0"
+  version = "4.9.0"
 
   name        = "web-sg-project-alpha-dev"
   description = "Security group for web-servers with HTTP ports open within VPC"
@@ -51,7 +52,7 @@ module "app_security_group" {
 
 module "lb_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "3.17.0"
+  version = "4.9.0"
 
   name        = "lb-sg-project-alpha-dev"
   description = "Security group for load balancer with HTTP ports open within VPC"
@@ -72,14 +73,14 @@ resource "random_string" "lb_id" {
 
 module "elb_http" {
   source  = "terraform-aws-modules/elb/aws"
-  version = "2.4.0"
+  version = "3.0.1"
 
   # Ensure load balancer name is unique
   name = "lb-${random_string.lb_id.result}-project-alpha-dev"
 
   internal = false
 
-  security_groups = [module.lb_security_group.this_security_group_id]
+  security_groups = [module.lb_security_group.security_group_id]
   subnets         = module.vpc.public_subnets
 
   number_of_instances = length(module.ec2_instances.instance_ids)
@@ -112,7 +113,7 @@ module "ec2_instances" {
   instance_count     = 2
   instance_type      = "t2.micro"
   subnet_ids         = module.vpc.private_subnets[*]
-  security_group_ids = [module.app_security_group.this_security_group_id]
+  security_group_ids = [module.app_security_group.security_group_id]
 
   tags = {
     project     = "project-alpha",
